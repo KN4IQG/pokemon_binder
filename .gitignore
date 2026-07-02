@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.db
+
+# Conda
+.env
+.venv
+
+# React
+frontend/node_modules/
+frontend/dist/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
