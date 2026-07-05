@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import requests
 
 from database import engine
@@ -22,12 +23,20 @@ app.add_middleware(
 
 
 from database import SessionLocal
+from models import User
 from models import CollectionItem
+from models import Binder
 from models import BinderPage
 from models import BinderSlot
+from auth import hash_password, verify_password, create_access_token, get_current_user
 
 
 VALID_SIZES = {2, 3, 4}
+
+
+class AuthRequest(BaseModel):
+    username: str
+    password: str
 
 
 def fetch_card(card_id: str):
@@ -53,9 +62,70 @@ def fetch_card(card_id: str):
         "price": price
     }
 
+
+def get_owned_binder(db, binder_id: int, user: User) -> Binder:
+    binder = (
+        db.query(Binder)
+        .filter(Binder.id == binder_id, Binder.user_id == user.id)
+        .first()
+    )
+    if not binder:
+        raise HTTPException(status_code=404, detail="Binder not found")
+    return binder
+
+
+def get_owned_page(db, page_id: int, user: User) -> BinderPage:
+    page = (
+        db.query(BinderPage)
+        .join(Binder, BinderPage.binder_id == Binder.id)
+        .filter(BinderPage.id == page_id, Binder.user_id == user.id)
+        .first()
+    )
+    if not page:
+        raise HTTPException(status_code=404, detail="Binder page not found")
+    return page
+
+
 @app.get("/")
 def root():
     return {"message": "Pokemon Binder API is running!"}
+
+
+@app.post("/auth/register")
+def register(payload: AuthRequest):
+
+    db = SessionLocal()
+
+    existing = db.query(User).filter(User.username == payload.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    user = User(
+        username=payload.username,
+        hashed_password=hash_password(payload.password)
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token({"sub": str(user.id)})
+
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post("/auth/login")
+def login(payload: AuthRequest):
+
+    db = SessionLocal()
+
+    user = db.query(User).filter(User.username == payload.username).first()
+
+    if not user or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+
+    token = create_access_token({"sub": str(user.id)})
+
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @app.get("/search-card")
@@ -104,13 +174,14 @@ def get_card(card_id: str):
 
     return response.json()["data"]
 
+
 @app.post("/collection/add")
-def add_card(card_id: str, quantity: int = 1):
+def add_card(card_id: str, quantity: int = 1, current_user: User = Depends(get_current_user)):
 
     db = SessionLocal()
 
     item = CollectionItem(
-        user_id=1,
+        user_id=current_user.id,
         card_id=card_id,
         quantity=quantity
     )
@@ -120,12 +191,17 @@ def add_card(card_id: str, quantity: int = 1):
 
     return {"message": "Card added"}
 
+
 @app.get("/collection")
-def get_collection():
+def get_collection(current_user: User = Depends(get_current_user)):
 
     db = SessionLocal()
 
-    items = db.query(CollectionItem).all()
+    items = (
+        db.query(CollectionItem)
+        .filter(CollectionItem.user_id == current_user.id)
+        .all()
+    )
 
     collection = []
 
@@ -144,45 +220,126 @@ def get_collection():
 
     return collection
 
+
 @app.post("/binder/create")
-def create_binder(name: str, size: int = 3):
+def create_binder(name: str, size: int = 3, current_user: User = Depends(get_current_user)):
 
     if size not in VALID_SIZES:
         return {"error": "size must be 2, 3, or 4"}
 
     db = SessionLocal()
 
+    binder = Binder(user_id=current_user.id, name=name, size=size)
+    db.add(binder)
+    db.commit()
+    db.refresh(binder)
+
     page = BinderPage(
-        user_id=1,
-        name=name,
+        binder_id=binder.id,
+        page_number=1,
         rows=size,
         cols=size
+    )
+    db.add(page)
+    db.commit()
+    db.refresh(page)
+
+    return {"binder_id": binder.id, "page_id": page.id}
+
+
+@app.get("/binder/list")
+def list_binders(current_user: User = Depends(get_current_user)):
+
+    db = SessionLocal()
+
+    binders = db.query(Binder).filter(Binder.user_id == current_user.id).all()
+
+    result = []
+
+    for b in binders:
+
+        page_count = (
+            db.query(BinderPage)
+            .filter(BinderPage.binder_id == b.id)
+            .count()
+        )
+
+        first_page = (
+            db.query(BinderPage)
+            .filter(BinderPage.binder_id == b.id)
+            .order_by(BinderPage.page_number)
+            .first()
+        )
+
+        result.append({
+            "binder_id": b.id,
+            "name": b.name,
+            "size": b.size,
+            "page_count": page_count,
+            "first_page_id": first_page.id if first_page else None
+        })
+
+    return result
+
+
+@app.post("/binder/{binder_id}/pages")
+def add_page(binder_id: int, current_user: User = Depends(get_current_user)):
+
+    db = SessionLocal()
+
+    binder = get_owned_binder(db, binder_id, current_user)
+
+    last_page = (
+        db.query(BinderPage)
+        .filter(BinderPage.binder_id == binder_id)
+        .order_by(BinderPage.page_number.desc())
+        .first()
+    )
+
+    next_number = (last_page.page_number + 1) if last_page else 1
+
+    page = BinderPage(
+        binder_id=binder_id,
+        page_number=next_number,
+        rows=binder.size,
+        cols=binder.size
     )
 
     db.add(page)
     db.commit()
     db.refresh(page)
 
-    return {"page_id": page.id}
+    return {"page_id": page.id, "page_number": page.page_number}
 
 
-@app.get("/binder/list")
-def list_binders():
+@app.get("/binder/{binder_id}/pages")
+def list_binder_pages(binder_id: int, current_user: User = Depends(get_current_user)):
 
     db = SessionLocal()
 
-    pages = db.query(BinderPage).filter(BinderPage.user_id == 1).all()
+    get_owned_binder(db, binder_id, current_user)
 
-    return [
-        {"id": p.id, "name": p.name, "rows": p.rows, "cols": p.cols}
-        for p in pages
-    ]
+    pages = (
+        db.query(BinderPage)
+        .filter(BinderPage.binder_id == binder_id)
+        .order_by(BinderPage.page_number)
+        .all()
+    )
+
+    return [{"page_id": p.id, "page_number": p.page_number} for p in pages]
 
 
 @app.post("/binder/place")
-def place_card(page_id: int, position: int, card_id: str):
+def place_card(
+    page_id: int,
+    position: int,
+    card_id: str,
+    current_user: User = Depends(get_current_user)
+):
 
     db = SessionLocal()
+
+    get_owned_page(db, page_id, current_user)
 
     existing = (
         db.query(BinderSlot)
@@ -208,11 +365,13 @@ def place_card(page_id: int, position: int, card_id: str):
     return {"message": "placed"}
 
 
-@app.post("/binder/{page_id}/sort")
-def sort_binder(page_id: int):
-    """Re-arranges a binder's cards alphabetically by name into slot order."""
+@app.post("/binder/page/{page_id}/sort")
+def sort_binder_page(page_id: int, current_user: User = Depends(get_current_user)):
+    """Re-arranges a page's cards alphabetically by name into slot order."""
 
     db = SessionLocal()
+
+    get_owned_page(db, page_id, current_user)
 
     slots = (
         db.query(BinderSlot)
@@ -228,12 +387,10 @@ def sort_binder(page_id: int):
 
     cards.sort(key=lambda c: c["name"].lower())
 
-    # Clear old slots for this page
     for slot in slots:
         db.delete(slot)
     db.commit()
 
-    # Rewrite in sorted order, starting at position 0
     for position, card in enumerate(cards):
         db.add(BinderSlot(page_id=page_id, position=position, card_id=card["id"]))
 
@@ -242,24 +399,23 @@ def sort_binder(page_id: int):
     return {"message": "sorted", "count": len(cards)}
 
 
-@app.get("/binder/{page_id}")
-def get_binder(page_id: int):
+@app.get("/binder/page/{page_id}")
+def get_binder_page(page_id: int, current_user: User = Depends(get_current_user)):
 
     db = SessionLocal()
 
-    # 1. Get page info
-    page = db.query(BinderPage).filter(BinderPage.id == page_id).first()
+    page = get_owned_page(db, page_id, current_user)
 
-    if not page:
-        return {"error": "Binder page not found"}
+    total_pages = (
+        db.query(BinderPage)
+        .filter(BinderPage.binder_id == page.binder_id)
+        .count()
+    )
 
-    # 2. Get slots for this page
     slots = db.query(BinderSlot).filter(BinderSlot.page_id == page_id).all()
 
-    # 3. Convert slots into lookup map
     slot_map = {slot.position: slot.card_id for slot in slots}
 
-    # 4. Build frontend grid
     cells = []
 
     total_cells = page.rows * page.cols
@@ -278,10 +434,11 @@ def get_binder(page_id: int):
             "card": card
         })
 
-    # 5. Return frontend-ready structure
     return {
         "page_id": page.id,
-        "name": page.name,
+        "binder_id": page.binder_id,
+        "page_number": page.page_number,
+        "total_pages": total_pages,
         "rows": page.rows,
         "cols": page.cols,
         "cells": cells
