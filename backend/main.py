@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,11 +12,17 @@ from models import Base
 Base.metadata.create_all(bind=engine)
 
 
+# Comma-separated list of allowed frontend origins, e.g.:
+# ALLOWED_ORIGINS=http://localhost:5173,https://your-app.vercel.app
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173"
+).split(",")
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,6 +41,30 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 
 VALID_SIZES = {2, 3, 4}
 
+TCGDEX_BASE_URL = "https://api.tcgdex.net/v2/en"
+
+
+def _extract_price(card: dict):
+    pricing = card.get("pricing") or {}
+
+    tcgplayer = pricing.get("tcgplayer") or {}
+    preferred_variants = ["normal", "holofoil", "reverse", "reverse-holofoil", "unlimited", "1st-edition"]
+
+    for key in preferred_variants:
+        variant = tcgplayer.get(key)
+        if variant and "marketPrice" in variant:
+            return variant["marketPrice"]
+
+    for variant in tcgplayer.values():
+        if isinstance(variant, dict) and "marketPrice" in variant:
+            return variant["marketPrice"]
+
+    cardmarket = pricing.get("cardmarket") or {}
+    if "avg" in cardmarket:
+        return cardmarket["avg"]  # note: this fallback is in EUR, not USD
+
+    return None
+
 
 class AuthRequest(BaseModel):
     username: str
@@ -40,26 +72,24 @@ class AuthRequest(BaseModel):
 
 
 def fetch_card(card_id: str):
-    url = f"https://api.pokemontcg.io/v2/cards/{card_id}"
-    res = requests.get(url)
+    res = requests.get(f"{TCGDEX_BASE_URL}/cards/{card_id}")
 
     if res.status_code != 200:
         return None
 
-    card = res.json()["data"]
+    card = res.json()
 
-    price = None
-    tcgplayer = card.get("tcgplayer", {}).get("prices", {})
-    for variant in ("normal", "holofoil", "reverseHolofoil", "1stEditionHolofoil"):
-        if variant in tcgplayer and "market" in tcgplayer[variant]:
-            price = tcgplayer[variant]["market"]
-            break
+    image_base = card.get("image")
+    image = f"{image_base}/low.webp" if image_base else None
+
+    set_info = card.get("set") or {}
 
     return {
         "id": card["id"],
         "name": card["name"],
-        "image": card["images"]["small"],
-        "price": price
+        "image": image,
+        "price": _extract_price(card),
+        "set": set_info.get("name")
     }
 
 
@@ -131,33 +161,19 @@ def login(payload: AuthRequest):
 @app.get("/search-card")
 def search_card(name: str):
 
-    url = f"https://api.pokemontcg.io/v2/cards?q=name:{name}"
-
-    response = requests.get(url)
+    response = requests.get(f"{TCGDEX_BASE_URL}/cards", params={"name": name})
 
     if response.status_code != 200:
         return {"error": "Failed to fetch cards"}
 
-    data = response.json()
+    briefs = response.json()[:10]
 
     cards = []
 
-    for card in data["data"][:10]:
-
-        price = None
-        tcgplayer = card.get("tcgplayer", {}).get("prices", {})
-        for variant in ("normal", "holofoil", "reverseHolofoil", "1stEditionHolofoil"):
-            if variant in tcgplayer and "market" in tcgplayer[variant]:
-                price = tcgplayer[variant]["market"]
-                break
-
-        cards.append({
-            "id": card["id"],
-            "name": card["name"],
-            "set": card["set"]["name"],
-            "image": card["images"]["small"],
-            "price": price
-        })
+    for brief in briefs:
+        card = fetch_card(brief["id"])
+        if card:
+            cards.append(card)
 
     return cards
 
@@ -165,14 +181,12 @@ def search_card(name: str):
 @app.get("/card/{card_id}")
 def get_card(card_id: str):
 
-    url = f"https://api.pokemontcg.io/v2/cards/{card_id}"
-
-    response = requests.get(url)
+    response = requests.get(f"{TCGDEX_BASE_URL}/cards/{card_id}")
 
     if response.status_code != 200:
         return {"error": "Card not found"}
 
-    return response.json()["data"]
+    return response.json()
 
 
 @app.post("/collection/add")
