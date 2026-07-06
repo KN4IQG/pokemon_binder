@@ -3,9 +3,10 @@ import os
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 import requests
 
-from database import engine
+from database import engine, get_db
 from models import Base
 
 
@@ -30,7 +31,6 @@ app.add_middleware(
 
 
 
-from database import SessionLocal
 from models import User
 from models import CollectionItem
 from models import Binder
@@ -93,7 +93,7 @@ def fetch_card(card_id: str):
     }
 
 
-def get_owned_binder(db, binder_id: int, user: User) -> Binder:
+def get_owned_binder(db: Session, binder_id: int, user: User) -> Binder:
     binder = (
         db.query(Binder)
         .filter(Binder.id == binder_id, Binder.user_id == user.id)
@@ -104,7 +104,7 @@ def get_owned_binder(db, binder_id: int, user: User) -> Binder:
     return binder
 
 
-def get_owned_page(db, page_id: int, user: User) -> BinderPage:
+def get_owned_page(db: Session, page_id: int, user: User) -> BinderPage:
     page = (
         db.query(BinderPage)
         .join(Binder, BinderPage.binder_id == Binder.id)
@@ -122,9 +122,7 @@ def root():
 
 
 @app.post("/auth/register")
-def register(payload: AuthRequest):
-
-    db = SessionLocal()
+def register(payload: AuthRequest, db: Session = Depends(get_db)):
 
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
@@ -144,9 +142,7 @@ def register(payload: AuthRequest):
 
 
 @app.post("/auth/login")
-def login(payload: AuthRequest):
-
-    db = SessionLocal()
+def login(payload: AuthRequest, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == payload.username).first()
 
@@ -190,9 +186,12 @@ def get_card(card_id: str):
 
 
 @app.post("/collection/add")
-def add_card(card_id: str, quantity: int = 1, current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def add_card(
+    card_id: str,
+    quantity: int = 1,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     item = CollectionItem(
         user_id=current_user.id,
@@ -207,9 +206,10 @@ def add_card(card_id: str, quantity: int = 1, current_user: User = Depends(get_c
 
 
 @app.get("/collection")
-def get_collection(current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def get_collection(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     items = (
         db.query(CollectionItem)
@@ -236,12 +236,15 @@ def get_collection(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/binder/create")
-def create_binder(name: str, size: int = 3, current_user: User = Depends(get_current_user)):
+def create_binder(
+    name: str,
+    size: int = 3,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     if size not in VALID_SIZES:
         return {"error": "size must be 2, 3, or 4"}
-
-    db = SessionLocal()
 
     binder = Binder(user_id=current_user.id, name=name, size=size)
     db.add(binder)
@@ -262,9 +265,10 @@ def create_binder(name: str, size: int = 3, current_user: User = Depends(get_cur
 
 
 @app.get("/binder/list")
-def list_binders(current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def list_binders(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     binders = db.query(Binder).filter(Binder.user_id == current_user.id).all()
 
@@ -297,9 +301,11 @@ def list_binders(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/binder/{binder_id}/pages")
-def add_page(binder_id: int, current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def add_page(
+    binder_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     binder = get_owned_binder(db, binder_id, current_user)
 
@@ -327,9 +333,11 @@ def add_page(binder_id: int, current_user: User = Depends(get_current_user)):
 
 
 @app.get("/binder/{binder_id}/pages")
-def list_binder_pages(binder_id: int, current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def list_binder_pages(
+    binder_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     get_owned_binder(db, binder_id, current_user)
 
@@ -348,10 +356,9 @@ def place_card(
     page_id: int,
     position: int,
     card_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-
-    db = SessionLocal()
 
     get_owned_page(db, page_id, current_user)
 
@@ -380,10 +387,12 @@ def place_card(
 
 
 @app.post("/binder/page/{page_id}/sort")
-def sort_binder_page(page_id: int, current_user: User = Depends(get_current_user)):
+def sort_binder_page(
+    page_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Re-arranges a page's cards alphabetically by name into slot order."""
-
-    db = SessionLocal()
 
     get_owned_page(db, page_id, current_user)
 
@@ -414,9 +423,11 @@ def sort_binder_page(page_id: int, current_user: User = Depends(get_current_user
 
 
 @app.get("/binder/page/{page_id}")
-def get_binder_page(page_id: int, current_user: User = Depends(get_current_user)):
-
-    db = SessionLocal()
+def get_binder_page(
+    page_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     page = get_owned_page(db, page_id, current_user)
 
