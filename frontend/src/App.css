@@ -132,6 +132,35 @@ border-radius:6px;
     border-radius: 4px;
 }
 
+.condition-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(0,0,0,.75);
+    color: #93c5fd;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    max-width: 60%;
+}
+
+.condition-label {
+    display: block;
+    font-size: 12px;
+    color: gray;
+    margin-bottom: 10px;
+}
+
+.condition-label select,
+.collection-card-info select {
+    margin-top: 4px;
+    padding: 4px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+}
+
 .hint {
     background: #333;
     padding: 8px 12px;
@@ -315,6 +344,8 @@ border-radius:6px;
     line-height: 1;
     font-size: 14px;
     margin-bottom: 0;
+    z-index: 5;
+    pointer-events: auto;
 }
 
 .delete-button.small.slot-remove {

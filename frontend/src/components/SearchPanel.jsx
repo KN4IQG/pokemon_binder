@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { searchCards, addToCollection } from "../api";
 
+const CONDITIONS = [
+    "Mint",
+    "Near Mint",
+    "Lightly Played",
+    "Moderately Played",
+    "Heavily Played",
+    "Damaged"
+];
+
 function SearchPanel({ onCardAdded }) {
 
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [condition, setCondition] = useState("Near Mint");
 
     async function handleSearch() {
 
@@ -36,15 +46,13 @@ function SearchPanel({ onCardAdded }) {
     }
 
     async function handleAdd(cardId) {
-        await addToCollection(cardId, 1);
+        await addToCollection(cardId, 1, condition);
         if (onCardAdded) onCardAdded();
     }
 
     return (
 
         <div>
-
-            <h2>Search</h2>
 
             <input
                 type="text"
@@ -58,13 +66,22 @@ function SearchPanel({ onCardAdded }) {
                 {loading ? "Searching..." : "Search"}
             </button>
 
+            <label className="condition-label">
+                Condition when added:
+                <select value={condition} onChange={e => setCondition(e.target.value)}>
+                    {CONDITIONS.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                    ))}
+                </select>
+            </label>
+
             {error && <p className="error-text">{error}</p>}
 
             <div className="search-results">
                 {results.map(card => (
                     <div key={card.id} className="collection-card">
                         <img src={card.image} alt={card.name} />
-                        <div>
+                        <div className="collection-card-info">
                             <b>{card.name}</b>
                             <br />
                             {card.set}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import SearchPanel from "./SearchPanel";
 import CollectionPanel from "./CollectionPanel";
 
-function CollectionModal({ collection, selectedCard, onSelectCard, onDeleteCard, onCardAdded, onClose }) {
+function CollectionModal({ collection, selectedCard, onSelectCard, onDeleteCard, onUpdateCondition, onCardAdded, onClose }) {
 
     const [tab, setTab] = useState("collection");
 
@@ -44,6 +44,7 @@ function CollectionModal({ collection, selectedCard, onSelectCard, onDeleteCard,
                                 onClose();
                             }}
                             onDeleteCard={onDeleteCard}
+                            onUpdateCondition={onUpdateCondition}
                         />
                     ) : (
                         <SearchPanel onCardAdded={onCardAdded} />

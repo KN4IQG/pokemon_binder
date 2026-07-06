@@ -1,4 +1,13 @@
-function CollectionPanel({ collection, selectedCard, onSelectCard, onDeleteCard }) {
+const CONDITIONS = [
+    "Mint",
+    "Near Mint",
+    "Lightly Played",
+    "Moderately Played",
+    "Heavily Played",
+    "Damaged"
+];
+
+function CollectionPanel({ collection, selectedCard, onSelectCard, onDeleteCard, onUpdateCondition }) {
 
     return (
 
@@ -38,6 +47,18 @@ function CollectionPanel({ collection, selectedCard, onSelectCard, onDeleteCard 
                                 ${card.price.toFixed(2)}
                             </>
                         )}
+
+                        <br />
+
+                        <select
+                            value={card.condition || "Near Mint"}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => onUpdateCondition(card.item_id, e.target.value)}
+                        >
+                            {CONDITIONS.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
 
                     </div>
 

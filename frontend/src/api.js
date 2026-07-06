@@ -82,12 +82,22 @@ export async function searchCards(name) {
     return await response.json();
 }
 
-export async function addToCollection(cardId, quantity = 1) {
+export async function addToCollection(cardId, quantity = 1, condition = "Near Mint") {
     const response = await authFetch(
-        `${API_URL}/collection/add?card_id=${encodeURIComponent(cardId)}&quantity=${quantity}`,
+        `${API_URL}/collection/add?card_id=${encodeURIComponent(cardId)}&quantity=${quantity}&condition=${encodeURIComponent(condition)}`,
         { method: "POST" }
     );
     if (!response.ok) throw new Error("Failed to add card");
+    return await response.json();
+}
+
+export async function updateCondition(itemId, condition) {
+    const response = await authFetch(`${API_URL}/collection/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ condition })
+    });
+    if (!response.ok) throw new Error("Failed to update condition");
     return await response.json();
 }
 

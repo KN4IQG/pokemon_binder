@@ -10,6 +10,7 @@ import {
     logout,
     getCollection,
     deleteFromCollection,
+    updateCondition,
     listBinders,
     createBinder,
     updateBinderCover,
@@ -34,6 +35,7 @@ function App() {
     const [collection, setCollection] = useState([]);
     const [selectedCard, setSelectedCard] = useState(null);
     const [showCollectionModal, setShowCollectionModal] = useState(false);
+    const [artOnly, setArtOnly] = useState(false);
 
     const [newName, setNewName] = useState("");
     const [newSize, setNewSize] = useState(3);
@@ -163,6 +165,12 @@ function App() {
         await refreshCollection();
     }
 
+    async function handleUpdateCondition(itemId, condition) {
+        await updateCondition(itemId, condition);
+        await refreshCollection();
+        if (page) await openPage(page.page_id);
+    }
+
     function goToAdjacentPage(direction) {
         if (!page) return;
         const idx = pages.findIndex(p => p.page_id === page.page_id);
@@ -272,6 +280,9 @@ function App() {
                         <div className="toolbar">
                             <button onClick={handleSort}>Sort A–Z</button>
                             <button onClick={handleAddPage}>+ Add Page</button>
+                            <button onClick={() => setArtOnly(!artOnly)}>
+                                {artOnly ? "Show Info" : "Art Only"}
+                            </button>
                         </div>
 
                         <div className="page-nav">
@@ -294,7 +305,7 @@ function App() {
                             </button>
                         </div>
 
-                        <BinderGrid binder={page} onSlotClick={handleSlotClick} onRemoveCard={handleRemoveCard} />
+                        <BinderGrid binder={page} onSlotClick={handleSlotClick} onRemoveCard={handleRemoveCard} artOnly={artOnly} />
                     </>
                 ) : (
                     <h2>Create your first binder to get started</h2>
@@ -310,6 +321,7 @@ function App() {
                 selectedCard={selectedCard}
                 onSelectCard={setSelectedCard}
                 onDeleteCard={handleDeleteCard}
+                onUpdateCondition={handleUpdateCondition}
                 onCardAdded={handleCardAdded}
                 onClose={() => setShowCollectionModal(false)}
             />

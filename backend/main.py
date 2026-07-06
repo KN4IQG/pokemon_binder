@@ -75,6 +75,16 @@ class CoverUpdate(BaseModel):
     cover_image: str
 
 
+class ConditionUpdate(BaseModel):
+    condition: str
+
+
+VALID_CONDITIONS = {
+    "Mint", "Near Mint", "Lightly Played",
+    "Moderately Played", "Heavily Played", "Damaged"
+}
+
+
 def fetch_card(card_id: str):
     res = requests.get(f"{TCGDEX_BASE_URL}/cards/{card_id}")
 
@@ -95,6 +105,15 @@ def fetch_card(card_id: str):
         "price": _extract_price(card),
         "set": set_info.get("name")
     }
+
+
+def get_condition_for_card(db: Session, user_id: int, card_id: str):
+    item = (
+        db.query(CollectionItem)
+        .filter(CollectionItem.user_id == user_id, CollectionItem.card_id == card_id)
+        .first()
+    )
+    return item.condition if item else None
 
 
 def get_owned_binder(db: Session, binder_id: int, user: User) -> Binder:
@@ -193,14 +212,19 @@ def get_card(card_id: str):
 def add_card(
     card_id: str,
     quantity: int = 1,
+    condition: str = "Near Mint",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
 
+    if condition not in VALID_CONDITIONS:
+        condition = "Near Mint"
+
     item = CollectionItem(
         user_id=current_user.id,
         card_id=card_id,
-        quantity=quantity
+        quantity=quantity,
+        condition=condition
     )
 
     db.add(item)
@@ -232,6 +256,7 @@ def get_collection(
                 "item_id": item.id,
                 "card_id": item.card_id,
                 "quantity": item.quantity,
+                "condition": item.condition,
                 "name": card["name"],
                 "image": card["image"],
                 "price": card["price"]
@@ -260,6 +285,32 @@ def delete_collection_item(
     db.commit()
 
     return {"message": "deleted"}
+
+
+@app.patch("/collection/{item_id}")
+def update_condition(
+    item_id: int,
+    payload: ConditionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    if payload.condition not in VALID_CONDITIONS:
+        raise HTTPException(status_code=400, detail="Invalid condition")
+
+    item = (
+        db.query(CollectionItem)
+        .filter(CollectionItem.id == item_id, CollectionItem.user_id == current_user.id)
+        .first()
+    )
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Collection item not found")
+
+    item.condition = payload.condition
+    db.commit()
+
+    return {"message": "updated"}
 
 
 @app.post("/binder/create")
@@ -543,6 +594,8 @@ def get_binder_page(
 
         if card_id:
             card = fetch_card(card_id)
+            if card:
+                card["condition"] = get_condition_for_card(db, current_user.id, card_id)
         else:
             card = None
 

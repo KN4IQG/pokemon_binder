@@ -1,4 +1,4 @@
-function BinderGrid({ binder, onSlotClick, onRemoveCard }) {
+function BinderGrid({ binder, onSlotClick, onRemoveCard, artOnly }) {
 
     return (
 
@@ -26,21 +26,29 @@ function BinderGrid({ binder, onSlotClick, onRemoveCard }) {
                                 alt={cell.card.name}
                             />
 
-                            {cell.card.price != null && (
+                            {!artOnly && cell.card.condition && (
+                                <div className="condition-badge">
+                                    {cell.card.condition}
+                                </div>
+                            )}
+
+                            {!artOnly && cell.card.price != null && (
                                 <div className="price-tag">
                                     ${cell.card.price.toFixed(2)}
                                 </div>
                             )}
 
-                            <button
-                                className="delete-button small slot-remove"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemoveCard(cell.position);
-                                }}
-                            >
-                                ×
-                            </button>
+                            {!artOnly && (
+                                <button
+                                    className="delete-button small slot-remove"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRemoveCard(cell.position);
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            )}
 
                         </div>
 

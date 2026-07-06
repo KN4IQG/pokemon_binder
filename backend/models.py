@@ -19,6 +19,7 @@ class CollectionItem(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     card_id = Column(String)
     quantity = Column(Integer)
+    condition = Column(String, default="Near Mint")
 
 
 class Binder(Base):
