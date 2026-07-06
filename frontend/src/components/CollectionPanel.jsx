@@ -1,18 +1,20 @@
-function CollectionPanel({ collection, selectedCard, onSelectCard }) {
+function CollectionPanel({ collection, selectedCard, onSelectCard, onDeleteCard }) {
 
     return (
 
         <div>
 
-            <h2>Collection</h2>
+            {collection.length === 0 && (
+                <p className="empty-hint">No cards yet — search for some to add them.</p>
+            )}
 
             {collection.map(card => (
 
                 <div
-                    key={card.card_id}
+                    key={card.item_id}
                     className={
                         "collection-card" +
-                        (selectedCard?.card_id === card.card_id ? " selected" : "")
+                        (selectedCard?.item_id === card.item_id ? " selected" : "")
                     }
                     onClick={() => onSelectCard(card)}
                 >
@@ -22,7 +24,7 @@ function CollectionPanel({ collection, selectedCard, onSelectCard }) {
                         alt={card.name}
                     />
 
-                    <div>
+                    <div className="collection-card-info">
 
                         <b>{card.name}</b>
 
@@ -38,6 +40,16 @@ function CollectionPanel({ collection, selectedCard, onSelectCard }) {
                         )}
 
                     </div>
+
+                    <button
+                        className="delete-button small"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteCard(card.item_id);
+                        }}
+                    >
+                        ×
+                    </button>
 
                 </div>
 

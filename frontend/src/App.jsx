@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 import BinderGrid from "./components/BinderGrid";
-import CollectionPanel from "./components/CollectionPanel";
-import SearchPanel from "./components/SearchPanel";
+import CollectionModal from "./components/CollectionModal";
 import AuthPanel from "./components/AuthPanel";
 import {
     isLoggedIn,
     logout,
     getCollection,
+    deleteFromCollection,
     listBinders,
     createBinder,
     updateBinderCover,
@@ -32,6 +32,7 @@ function App() {
 
     const [collection, setCollection] = useState([]);
     const [selectedCard, setSelectedCard] = useState(null);
+    const [showCollectionModal, setShowCollectionModal] = useState(false);
 
     const [newName, setNewName] = useState("");
     const [newSize, setNewSize] = useState(3);
@@ -150,6 +151,11 @@ function App() {
         await refreshCollection();
     }
 
+    async function handleDeleteCard(itemId) {
+        await deleteFromCollection(itemId);
+        await refreshCollection();
+    }
+
     function goToAdjacentPage(direction) {
         if (!page) return;
         const idx = pages.findIndex(p => p.page_id === page.page_id);
@@ -167,7 +173,7 @@ function App() {
     const currentPageIndex = page ? pages.findIndex(p => p.page_id === page.page_id) : -1;
 
     return (
-
+        <>
         <div className="app">
 
             <div className="sidebar">
@@ -176,13 +182,18 @@ function App() {
                     <button className="logout-button" onClick={handleLogout}>Log Out</button>
                 </div>
 
-                <SearchPanel onCardAdded={handleCardAdded} />
+                <button
+                    className="open-collection-button"
+                    onClick={() => setShowCollectionModal(true)}
+                >
+                    📚 Collection ({collection.length})
+                </button>
 
-                <CollectionPanel
-                    collection={collection}
-                    selectedCard={selectedCard}
-                    onSelectCard={setSelectedCard}
-                />
+                {selectedCard && (
+                    <p className="hint sidebar-hint">
+                        Selected: <b>{selectedCard.name}</b> — click a slot to place it
+                    </p>
+                )}
 
                 <h2>Binders</h2>
 
@@ -251,12 +262,6 @@ function App() {
                     <>
                         <h1>{activeBinder?.name}</h1>
 
-                        {selectedCard && (
-                            <p className="hint">
-                                Selected: <b>{selectedCard.name}</b> — click a slot to place it
-                            </p>
-                        )}
-
                         <div className="toolbar">
                             <button onClick={handleSort}>Sort A–Z</button>
                             <button onClick={handleAddPage}>+ Add Page</button>
@@ -292,6 +297,17 @@ function App() {
 
         </div>
 
+        {showCollectionModal && (
+            <CollectionModal
+                collection={collection}
+                selectedCard={selectedCard}
+                onSelectCard={setSelectedCard}
+                onDeleteCard={handleDeleteCard}
+                onCardAdded={handleCardAdded}
+                onClose={() => setShowCollectionModal(false)}
+            />
+        )}
+        </>
     );
 
 }

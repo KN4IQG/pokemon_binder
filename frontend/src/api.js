@@ -91,6 +91,13 @@ export async function addToCollection(cardId, quantity = 1) {
     return await response.json();
 }
 
+export async function deleteFromCollection(itemId) {
+    const response = await authFetch(`${API_URL}/collection/${itemId}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete card");
+    return await response.json();
+}
 export async function listBinders() {
     const response = await authFetch(`${API_URL}/binder/list`);
     if (!response.ok) throw new Error("Failed to list binders");

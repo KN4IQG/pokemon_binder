@@ -229,6 +229,7 @@ def get_collection(
 
         if card:
             collection.append({
+                "item_id": item.id,
                 "card_id": item.card_id,
                 "quantity": item.quantity,
                 "name": card["name"],
@@ -237,6 +238,28 @@ def get_collection(
             })
 
     return collection
+
+
+@app.delete("/collection/{item_id}")
+def delete_collection_item(
+    item_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    item = (
+        db.query(CollectionItem)
+        .filter(CollectionItem.id == item_id, CollectionItem.user_id == current_user.id)
+        .first()
+    )
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Collection item not found")
+
+    db.delete(item)
+    db.commit()
+
+    return {"message": "deleted"}
 
 
 @app.post("/binder/create")
