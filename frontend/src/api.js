@@ -114,9 +114,11 @@ export async function listBinders() {
     return await response.json();
 }
 
-export async function createBinder(name, size, coverImage = null) {
+export async function createBinder(name, size, coverImage = null, pageColor = null, borderColor = null) {
     const params = new URLSearchParams({ name, size });
     if (coverImage) params.set("cover_image", coverImage);
+    if (pageColor) params.set("page_color", pageColor);
+    if (borderColor) params.set("border_color", borderColor);
 
     const response = await authFetch(`${API_URL}/binder/create?${params.toString()}`, {
         method: "POST"
@@ -132,6 +134,16 @@ export async function updateBinderCover(binderId, coverImage) {
         body: JSON.stringify({ cover_image: coverImage })
     });
     if (!response.ok) throw new Error("Failed to update cover");
+    return await response.json();
+}
+
+export async function updateBinderStyle(binderId, pageColor, borderColor) {
+    const response = await authFetch(`${API_URL}/binder/${binderId}/style`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_color: pageColor, border_color: borderColor })
+    });
+    if (!response.ok) throw new Error("Failed to update style");
     return await response.json();
 }
 

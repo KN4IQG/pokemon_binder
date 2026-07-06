@@ -30,6 +30,8 @@ class Binder(Base):
     name = Column(String)
     size = Column(Integer, default=3)  # rows == cols for every page in this binder
     cover_image = Column(String, nullable=True)
+    page_color = Column(String, default="#f3ecdf")    # background behind the cards
+    border_color = Column(String, default="#3c2a20")  # binder cover / spine / frame color
 
 
 class BinderPage(Base):

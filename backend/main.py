@@ -41,6 +41,18 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 
 VALID_SIZES = {2, 3, 4}
 
+DEFAULT_PAGE_COLOR = "#f3ecdf"
+DEFAULT_BORDER_COLOR = "#3c2a20"
+
+import re
+HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _clean_color(value: str, fallback: str) -> str:
+    if value and HEX_COLOR_RE.match(value):
+        return value
+    return fallback
+
 TCGDEX_BASE_URL = "https://api.tcgdex.net/v2/en"
 
 
@@ -73,6 +85,11 @@ class AuthRequest(BaseModel):
 
 class CoverUpdate(BaseModel):
     cover_image: str
+
+
+class StyleUpdate(BaseModel):
+    page_color: str
+    border_color: str
 
 
 class ConditionUpdate(BaseModel):
@@ -318,6 +335,8 @@ def create_binder(
     name: str,
     size: int = 3,
     cover_image: str = None,
+    page_color: str = None,
+    border_color: str = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -325,7 +344,14 @@ def create_binder(
     if size not in VALID_SIZES:
         return {"error": "size must be 2, 3, or 4"}
 
-    binder = Binder(user_id=current_user.id, name=name, size=size, cover_image=cover_image)
+    binder = Binder(
+        user_id=current_user.id,
+        name=name,
+        size=size,
+        cover_image=cover_image,
+        page_color=_clean_color(page_color, DEFAULT_PAGE_COLOR),
+        border_color=_clean_color(border_color, DEFAULT_BORDER_COLOR)
+    )
     db.add(binder)
     db.commit()
     db.refresh(binder)
@@ -373,6 +399,8 @@ def list_binders(
             "name": b.name,
             "size": b.size,
             "cover_image": b.cover_image,
+            "page_color": b.page_color or DEFAULT_PAGE_COLOR,
+            "border_color": b.border_color or DEFAULT_BORDER_COLOR,
             "page_count": page_count,
             "first_page_id": first_page.id if first_page else None
         })
@@ -425,6 +453,23 @@ def update_binder_cover(
     db.commit()
 
     return {"message": "cover updated"}
+
+
+@app.patch("/binder/{binder_id}/style")
+def update_binder_style(
+    binder_id: int,
+    payload: StyleUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    binder = get_owned_binder(db, binder_id, current_user)
+
+    binder.page_color = _clean_color(payload.page_color, DEFAULT_PAGE_COLOR)
+    binder.border_color = _clean_color(payload.border_color, DEFAULT_BORDER_COLOR)
+    db.commit()
+
+    return {"message": "style updated"}
 
 
 @app.delete("/binder/{binder_id}")

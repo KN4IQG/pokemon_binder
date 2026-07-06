@@ -14,6 +14,7 @@ import {
     listBinders,
     createBinder,
     updateBinderCover,
+    updateBinderStyle,
     deleteBinder,
     listBinderPages,
     addBinderPage,
@@ -44,7 +45,13 @@ function App() {
     const [newName, setNewName] = useState("");
     const [newSize, setNewSize] = useState(3);
     const [newCoverUrl, setNewCoverUrl] = useState("");
+    const [newPageColor, setNewPageColor] = useState("#f3ecdf");
+    const [newBorderColor, setNewBorderColor] = useState("#3c2a20");
     const [showNewBinderForm, setShowNewBinderForm] = useState(false);
+
+    const [styleEditorId, setStyleEditorId] = useState(null);
+    const [styleDraftPage, setStyleDraftPage] = useState("#f3ecdf");
+    const [styleDraftBorder, setStyleDraftBorder] = useState("#3c2a20");
 
     async function refreshCollection() {
         const data = await getCollection();
@@ -118,11 +125,35 @@ function App() {
 
     async function handleCreateBinder() {
         if (!newName.trim()) return;
-        const result = await createBinder(newName, newSize, newCoverUrl.trim() || null);
+        const result = await createBinder(
+            newName,
+            newSize,
+            newCoverUrl.trim() || null,
+            newPageColor,
+            newBorderColor
+        );
         setNewName("");
         setNewCoverUrl("");
+        setNewPageColor("#f3ecdf");
+        setNewBorderColor("#3c2a20");
         setShowNewBinderForm(false);
         await refreshBinders(result.binder_id);
+    }
+
+    function openStyleEditor(binder, e) {
+        e.stopPropagation();
+        setShowNewBinderForm(false);
+        setStyleEditorId(binder.binder_id);
+        setStyleDraftPage(binder.page_color || "#f3ecdf");
+        setStyleDraftBorder(binder.border_color || "#3c2a20");
+    }
+
+    async function handleSaveStyle() {
+        if (!styleEditorId) return;
+        await updateBinderStyle(styleEditorId, styleDraftPage, styleDraftBorder);
+        const savedId = styleEditorId;
+        setStyleEditorId(null);
+        await refreshBinders(savedId);
     }
 
     async function handleChangeCover(binderId) {
@@ -271,7 +302,10 @@ function App() {
                             }
                             onClick={() => openBinder(b.binder_id)}
                         >
-                            <div className="binder-cover">
+                            <div
+                                className="binder-cover"
+                                style={!b.cover_image ? { background: b.border_color || undefined } : undefined}
+                            >
                                 {b.cover_image ? (
                                     <img src={b.cover_image} alt={b.name} />
                                 ) : (
@@ -288,6 +322,9 @@ function App() {
                                 <button onClick={(e) => { e.stopPropagation(); handleChangeCover(b.binder_id); }}>
                                     Cover
                                 </button>
+                                <button onClick={(e) => openStyleEditor(b, e)}>
+                                    Style
+                                </button>
                                 <button
                                     className="delete-button"
                                     onClick={(e) => handleDeleteBinder(b.binder_id, e)}
@@ -295,6 +332,33 @@ function App() {
                                     Delete
                                 </button>
                             </div>
+
+                            {styleEditorId === b.binder_id && (
+                                <div className="binder-popover style-popover" onClick={(e) => e.stopPropagation()}>
+                                    <label className="color-field">
+                                        Page color
+                                        <input
+                                            type="color"
+                                            value={styleDraftPage}
+                                            onChange={e => setStyleDraftPage(e.target.value)}
+                                        />
+                                    </label>
+
+                                    <label className="color-field">
+                                        Border color
+                                        <input
+                                            type="color"
+                                            value={styleDraftBorder}
+                                            onChange={e => setStyleDraftBorder(e.target.value)}
+                                        />
+                                    </label>
+
+                                    <div className="popover-buttons">
+                                        <button onClick={() => setStyleEditorId(null)}>Cancel</button>
+                                        <button onClick={handleSaveStyle}>Save</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
 
@@ -308,7 +372,7 @@ function App() {
                 </div>
 
                 {showNewBinderForm && (
-                    <div className="new-binder-popover">
+                    <div className="binder-popover new-binder-popover">
                         <input
                             placeholder="New binder name"
                             value={newName}
@@ -327,6 +391,26 @@ function App() {
                             <option value={4}>4x4</option>
                         </select>
 
+                        <div className="color-row">
+                            <label className="color-field">
+                                Page color
+                                <input
+                                    type="color"
+                                    value={newPageColor}
+                                    onChange={e => setNewPageColor(e.target.value)}
+                                />
+                            </label>
+
+                            <label className="color-field">
+                                Border color
+                                <input
+                                    type="color"
+                                    value={newBorderColor}
+                                    onChange={e => setNewBorderColor(e.target.value)}
+                                />
+                            </label>
+                        </div>
+
                         <button onClick={handleCreateBinder}>Create Binder</button>
                     </div>
                 )}
@@ -340,7 +424,13 @@ function App() {
 
                         {!coverOpen ? (
 
-                            <div className="binder-viewport closed">
+                            <div
+                                className="binder-viewport closed"
+                                style={{
+                                    "--page-color": activeBinder.page_color || "#f3ecdf",
+                                    "--border-color": activeBinder.border_color || "#3c2a20"
+                                }}
+                            >
 
                                 <div
                                     className="binder-cover-face"
@@ -365,7 +455,13 @@ function App() {
                                     </button>
                                 </div>
 
-                                <div className="binder-viewport open">
+                                <div
+                                    className="binder-viewport open"
+                                    style={{
+                                        "--page-color": activeBinder.page_color || "#f3ecdf",
+                                        "--border-color": activeBinder.border_color || "#3c2a20"
+                                    }}
+                                >
 
                                     <button className="page-arrow left-arrow" onClick={handlePrevSpread}>
                                         {spreadIndex === 0 ? "✕" : "←"}
