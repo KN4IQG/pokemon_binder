@@ -1,17 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap');
+
+:root {
+    --leather: #3c2a20;
+    --leather-light: #55392a;
+    --leather-dark: #24160f;
+    --ring: linear-gradient(180deg, #f0d78c, #a8792f);
+    --ring-shadow: #1a0f0a;
+    --page: #f3ecdf;
+    --page-shadow: rgba(0,0,0,.25);
+    --accent: #4ade80;
+    --panel: #2a2a2a;
+    --panel-line: #3a3a3a;
+}
+
 body {
     background: #1f1f1f;
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: 'Nunito', Arial, sans-serif;
 }
 
-.container {
-    width: 900px;
-    margin: 40px auto;
+h1, h2, .brand-title {
+    font-family: 'Baloo 2', 'Nunito', Arial, sans-serif;
 }
 
 .grid {
     display: grid;
-    gap: 20px;
+    gap: 14px;
+    width: 100%;
 }
 
 .slot {
@@ -19,11 +34,11 @@ body {
 
     background: white;
 
-    border-radius: 10px;
+    border-radius: 8px;
 
-    padding: 6px;
+    padding: 5px;
 
-    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+    box-shadow: 0 3px 8px rgba(0,0,0,.35);
 
     display: flex;
     justify-content: center;
@@ -41,78 +56,398 @@ body {
 }
 
 .empty {
-    color: gray;
+    color: #b3aca2;
+    font-size: 13px;
 }
 
-.app{
-    display:flex;
-    gap:40px;
-    padding:30px;
+/* ---------- App shell: top toolbar instead of side rail ---------- */
+
+.app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
 }
 
-.sidebar{
-    width:250px;
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 14px 30px;
+    border-bottom: 1px solid var(--panel-line);
+    background: #1a1a1a;
 }
 
-.sidebar input {
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-    width: 100%;
+.brand-icon {
+    font-size: 28px;
+}
 
-    padding: 8px;
+.brand-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: .3px;
+}
 
-    margin-bottom: 10px;
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-    border-radius: 6px;
+.topbar-hint {
+    margin-bottom: 0;
+}
 
+.open-collection-button {
+    width: auto;
+    padding: 10px 16px;
+    margin-bottom: 0;
+    background: #2563eb;
+    color: white;
     border: none;
-
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
-.sidebar button {
+.logout-button {
+    width: auto;
+    padding: 8px 14px;
+    margin-bottom: 0;
+}
 
-    width: 100%;
+/* ---------- Binder shelf (was the sidebar binder list) ---------- */
 
+.binder-shelf {
+    position: relative;
+    padding: 12px 30px;
+    border-bottom: 1px solid var(--panel-line);
+    background: #202020;
+}
+
+.binder-shelf-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.binder-tile {
+    flex-shrink: 0;
+    width: 190px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 8px;
-
-    margin-bottom: 20px;
-
+    background: var(--panel);
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
 }
 
-.main{
-    flex:1;
+.binder-tile.selected {
+    border-color: var(--accent);
 }
 
-.collection-card{
-
-display:flex;
-
-align-items:center;
-
-gap:10px;
-
-margin-bottom:12px;
-
-padding:8px;
-
-background:#333;
-
-border-radius:8px;
-
-cursor:pointer;
-
+.binder-cover {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--leather-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 18px;
 }
 
-.collection-card img{
-
-width:70px;
-
-border-radius:6px;
-
+.binder-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.collection-card.selected {
-    outline: 2px solid #4ade80;
+.binder-info {
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow: hidden;
 }
+
+.binder-info b {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.binder-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.binder-actions button {
+    width: auto;
+    padding: 3px 6px;
+    margin-bottom: 0;
+    font-size: 10px;
+}
+
+.delete-button {
+    background: #7f1d1d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+.new-binder-tile {
+    justify-content: center;
+    color: #9ca3af;
+    border: 2px dashed var(--panel-line);
+    background: transparent;
+    font-size: 13px;
+}
+
+.new-binder-popover {
+    position: absolute;
+    top: calc(100% - 4px);
+    left: 30px;
+    z-index: 20;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 8px;
+    padding: 14px;
+    width: 260px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.4);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.new-binder-popover input,
+.new-binder-popover select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+}
+
+.new-binder-popover button {
+    width: 100%;
+    padding: 8px;
+}
+
+/* ---------- Main viewing area ---------- */
+
+.main {
+    flex: 1;
+    padding: 24px 30px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main h1 {
+    margin-top: 0;
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.toolbar button {
+    width: auto;
+    padding: 8px 14px;
+    margin-bottom: 0;
+}
+
+.error-text {
+    color: #f87171;
+}
+
+/* ---------- Closed binder (cover view) ---------- */
+
+.binder-viewport.closed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    margin: 10px auto;
+}
+
+.binder-cover-face {
+    position: relative;
+    width: 340px;
+    aspect-ratio: 3 / 4;
+    margin-left: 16px;
+    border-radius: 4px 14px 14px 4px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--leather);
+    background-image:
+        linear-gradient(135deg, var(--leather-light), var(--leather) 45%, var(--leather-dark));
+    box-shadow: var(--shadow, 0 10px 25px rgba(0,0,0,.4));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.binder-cover-face::before {
+    content: "";
+    position: absolute;
+    left: -16px;
+    top: 10px;
+    bottom: 10px;
+    width: 16px;
+    border-radius: 4px;
+    background-color: var(--leather-dark);
+    background-image: radial-gradient(circle, #171010 3.5px, transparent 3.5px);
+    background-size: 16px 34px;
+    background-repeat: repeat-y;
+    background-position: center 12px;
+    box-shadow: inset -2px 0 4px rgba(0,0,0,.5);
+}
+
+.cover-placeholder {
+    font-size: 64px;
+    opacity: .45;
+}
+
+.open-cover-button {
+    width: auto;
+    padding: 10px 22px;
+    background: var(--accent);
+    color: #0b3b20;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ---------- Open binder (two-page spread) ---------- */
+
+.binder-viewport.open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.page-arrow {
+    width: auto;
+    background: transparent;
+    border: none;
+    color: #d1d5db;
+    font-size: 26px;
+    padding: 10px;
+    cursor: pointer;
+    margin-bottom: 0;
+    align-self: center;
+}
+
+.page-arrow:disabled {
+    opacity: .2;
+    cursor: default;
+}
+
+.binder-spread {
+    display: flex;
+    align-items: stretch;
+    background-image: linear-gradient(180deg, var(--leather-light), var(--leather) 60%, var(--leather-dark));
+    padding: 22px 14px;
+    border-radius: 10px;
+    box-shadow: 0 14px 30px rgba(0,0,0,.45);
+}
+
+.binder-half {
+    width: 440px;
+    background: var(--page);
+    border-radius: 3px;
+    padding: 16px;
+    box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,.12),
+        0 2px 6px var(--page-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #2b2b2b;
+}
+
+.binder-spine {
+    width: 26px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: var(--leather-dark);
+    border-radius: 3px;
+    box-shadow: inset 2px 0 4px rgba(0,0,0,.5), inset -2px 0 4px rgba(0,0,0,.5);
+    z-index: 2;
+}
+
+.spine-ring {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-image: var(--ring);
+    box-shadow: 0 0 0 3px var(--ring-shadow), inset 0 1px 1px rgba(255,255,255,.6), inset 0 -1px 2px rgba(0,0,0,.5);
+}
+
+.half-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #7a7266;
+    margin-bottom: 10px;
+}
+
+.blank-panel {
+    flex: 1;
+    width: 100%;
+}
+
+.add-page-panel {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9a9184;
+    border: 2px dashed #cfc6b6;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    min-height: 200px;
+}
+
+.sort-button {
+    margin-top: 12px;
+    width: auto;
+    padding: 6px 16px;
+    background: #e4dcc8;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #2b2b2b;
+}
+
+/* ---------- Card overlays ---------- */
 
 .card-wrapper {
     position: relative;
@@ -169,34 +504,7 @@ border-radius:6px;
     margin-bottom: 10px;
 }
 
-.toolbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.toolbar button {
-    width: auto;
-    padding: 8px 14px;
-    margin-bottom: 0;
-}
-
-.page-nav {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-.page-nav button {
-    width: auto;
-    padding: 8px 14px;
-    margin-bottom: 0;
-}
-
-.error-text {
-    color: #f87171;
-}
+/* ---------- Collection modal ---------- */
 
 .search-results {
     max-height: 300px;
@@ -204,130 +512,25 @@ border-radius:6px;
     margin-bottom: 20px;
 }
 
-.auth-panel {
-    max-width: 320px;
-    margin: 100px auto;
-    padding: 30px;
-    background: #2a2a2a;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.auth-panel input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    border: none;
-}
-
-.auth-panel button {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-}
-
-.auth-toggle {
-    color: #4ade80;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.sidebar-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 10px;
-}
-
-.logout-button {
-    width: auto;
-    padding: 6px 12px;
-    margin-bottom: 0;
-}
-
-.binder-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    padding: 8px;
-    background: #333;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.binder-row.selected {
-    outline: 2px solid #4ade80;
-}
-
-.binder-cover {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    border-radius: 6px;
-    background: #222;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    font-size: 20px;
-}
-
-.binder-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.binder-info {
-    flex: 1;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.binder-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.binder-actions button {
-    width: auto;
-    padding: 4px 8px;
-    margin-bottom: 0;
-    font-size: 11px;
-}
-
-.delete-button {
-    background: #7f1d1d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-}
-
-.open-collection-button {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 16px;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.sidebar-hint {
-    margin-bottom: 16px;
-}
-
-.empty-hint {
-    color: gray;
-    font-size: 14px;
-}
-
-.collection-card {
+.collection-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+    padding:8px;
+    background:#333;
+    border-radius:8px;
+    cursor:pointer;
     position: relative;
+}
+
+.collection-card img{
+    width:70px;
+    border-radius:6px;
+}
+
+.collection-card.selected {
+    outline: 2px solid #4ade80;
 }
 
 .collection-card-info {
@@ -420,4 +623,48 @@ border-radius:6px;
 .modal-body {
     padding: 16px;
     overflow-y: auto;
+}
+
+/* ---------- Auth panel ---------- */
+
+.auth-panel {
+    max-width: 320px;
+    margin: 100px auto;
+    padding: 30px;
+    background: #2a2a2a;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.auth-panel input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: none;
+}
+
+.auth-panel button {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.auth-toggle {
+    color: #4ade80;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* ---------- Generic form controls used inline ---------- */
+
+input, select, button {
+    font-family: inherit;
+}
+
+@media (max-width: 900px) {
+    .binder-half {
+        width: 300px;
+    }
 }

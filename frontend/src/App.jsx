@@ -44,6 +44,7 @@ function App() {
     const [newName, setNewName] = useState("");
     const [newSize, setNewSize] = useState(3);
     const [newCoverUrl, setNewCoverUrl] = useState("");
+    const [showNewBinderForm, setShowNewBinderForm] = useState(false);
 
     async function refreshCollection() {
         const data = await getCollection();
@@ -120,6 +121,7 @@ function App() {
         const result = await createBinder(newName, newSize, newCoverUrl.trim() || null);
         setNewName("");
         setNewCoverUrl("");
+        setShowNewBinderForm(false);
         await refreshBinders(result.binder_id);
     }
 
@@ -233,84 +235,101 @@ function App() {
         <>
         <div className="app">
 
-            <div className="sidebar">
-
-                <div className="sidebar-header">
-                    <button className="logout-button" onClick={handleLogout}>Log Out</button>
+            <header className="topbar">
+                <div className="topbar-brand">
+                    <span className="brand-icon">🗂️</span>
+                    <h1 className="brand-title">Pokémon Binder</h1>
                 </div>
 
-                <button
-                    className="open-collection-button"
-                    onClick={() => setShowCollectionModal(true)}
-                >
-                    📚 Collection ({collection.length})
-                </button>
+                <div className="topbar-actions">
+                    {selectedCard && (
+                        <p className="hint topbar-hint">
+                            Selected: <b>{selectedCard.name}</b> — click a slot to place it
+                        </p>
+                    )}
 
-                {selectedCard && (
-                    <p className="hint sidebar-hint">
-                        Selected: <b>{selectedCard.name}</b> — click a slot to place it
-                    </p>
-                )}
-
-                <h2>Binders</h2>
-
-                {binders.map(b => (
-                    <div
-                        key={b.binder_id}
-                        className={
-                            "binder-row" +
-                            (activeBinderId === b.binder_id ? " selected" : "")
-                        }
-                        onClick={() => openBinder(b.binder_id)}
+                    <button
+                        className="open-collection-button"
+                        onClick={() => setShowCollectionModal(true)}
                     >
-                        <div className="binder-cover">
-                            {b.cover_image ? (
-                                <img src={b.cover_image} alt={b.name} />
-                            ) : (
-                                <span>📁</span>
-                            )}
-                        </div>
+                        📚 Collection ({collection.length})
+                    </button>
 
-                        <div className="binder-info">
-                            <b>{b.name}</b>
-                            <br />
-                            {b.size}x{b.size} — {b.page_count} page{b.page_count !== 1 ? "s" : ""}
-                        </div>
+                    <button className="logout-button" onClick={handleLogout}>Log Out</button>
+                </div>
+            </header>
 
-                        <div className="binder-actions">
-                            <button onClick={(e) => { e.stopPropagation(); handleChangeCover(b.binder_id); }}>
-                                Cover
-                            </button>
-                            <button
-                                className="delete-button"
-                                onClick={(e) => handleDeleteBinder(b.binder_id, e)}
-                            >
-                                Delete
-                            </button>
+            <div className="binder-shelf">
+                <div className="binder-shelf-scroll">
+
+                    {binders.map(b => (
+                        <div
+                            key={b.binder_id}
+                            className={
+                                "binder-tile" +
+                                (activeBinderId === b.binder_id ? " selected" : "")
+                            }
+                            onClick={() => openBinder(b.binder_id)}
+                        >
+                            <div className="binder-cover">
+                                {b.cover_image ? (
+                                    <img src={b.cover_image} alt={b.name} />
+                                ) : (
+                                    <span>📁</span>
+                                )}
+                            </div>
+
+                            <div className="binder-info">
+                                <b>{b.name}</b>
+                                {b.size}x{b.size} — {b.page_count} page{b.page_count !== 1 ? "s" : ""}
+                            </div>
+
+                            <div className="binder-actions">
+                                <button onClick={(e) => { e.stopPropagation(); handleChangeCover(b.binder_id); }}>
+                                    Cover
+                                </button>
+                                <button
+                                    className="delete-button"
+                                    onClick={(e) => handleDeleteBinder(b.binder_id, e)}
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
+                    ))}
+
+                    <div
+                        className="binder-tile new-binder-tile"
+                        onClick={() => setShowNewBinderForm(v => !v)}
+                    >
+                        + New Binder
                     </div>
-                ))}
 
-                <input
-                    placeholder="New binder name"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                />
+                </div>
 
-                <input
-                    placeholder="Cover image URL (optional)"
-                    value={newCoverUrl}
-                    onChange={e => setNewCoverUrl(e.target.value)}
-                />
+                {showNewBinderForm && (
+                    <div className="new-binder-popover">
+                        <input
+                            placeholder="New binder name"
+                            value={newName}
+                            onChange={e => setNewName(e.target.value)}
+                        />
 
-                <select value={newSize} onChange={e => setNewSize(Number(e.target.value))}>
-                    <option value={2}>2x2</option>
-                    <option value={3}>3x3</option>
-                    <option value={4}>4x4</option>
-                </select>
+                        <input
+                            placeholder="Cover image URL (optional)"
+                            value={newCoverUrl}
+                            onChange={e => setNewCoverUrl(e.target.value)}
+                        />
 
-                <button onClick={handleCreateBinder}>Create Binder</button>
+                        <select value={newSize} onChange={e => setNewSize(Number(e.target.value))}>
+                            <option value={2}>2x2</option>
+                            <option value={3}>3x3</option>
+                            <option value={4}>4x4</option>
+                        </select>
 
+                        <button onClick={handleCreateBinder}>Create Binder</button>
+                    </div>
+                )}
             </div>
 
             <div className="main">
