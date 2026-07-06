@@ -195,14 +195,22 @@ def login(payload: AuthRequest, db: Session = Depends(get_db)):
 
 
 @app.get("/search-card")
-def search_card(name: str):
+def search_card(name: str, limit: int = 30):
 
-    response = requests.get(f"{TCGDEX_BASE_URL}/cards", params={"name": name})
+    response = requests.get(
+        f"{TCGDEX_BASE_URL}/cards",
+        params={
+            "name": name,
+            "sort:field": "releaseDate",
+            "sort:order": "DESC",
+            "pagination:itemsPerPage": limit,
+        },
+    )
 
     if response.status_code != 200:
         return {"error": "Failed to fetch cards"}
 
-    briefs = response.json()[:10]
+    briefs = response.json()
 
     cards = []
 
