@@ -455,7 +455,7 @@ def place_card(
     return {"message": "placed"}
 
 
-@app.delete("/binder/slot")
+@app.delete("/binder/page/{page_id}/slot")
 def remove_card(
     page_id: int,
     position: int,

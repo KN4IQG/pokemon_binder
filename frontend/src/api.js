@@ -164,7 +164,7 @@ export async function placeCard(pageId, position, cardId) {
 
 export async function removeCard(pageId, position) {
     const response = await authFetch(
-        `${API_URL}/binder/slot?page_id=${pageId}&position=${position}`,
+        `${API_URL}/binder/page/${pageId}/slot?position=${position}`,
         { method: "DELETE" }
     );
     if (!response.ok) throw new Error("Failed to remove card");
