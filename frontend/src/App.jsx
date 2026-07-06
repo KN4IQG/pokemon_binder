@@ -30,7 +30,11 @@ function App() {
     const [binders, setBinders] = useState([]);
     const [activeBinderId, setActiveBinderId] = useState(null);
     const [pages, setPages] = useState([]);
-    const [page, setPage] = useState(null);
+
+    const [coverOpen, setCoverOpen] = useState(false);
+    const [spreadIndex, setSpreadIndex] = useState(0);
+    const [leftPage, setLeftPage] = useState(null);
+    const [rightPage, setRightPage] = useState(null);
 
     const [collection, setCollection] = useState([]);
     const [selectedCard, setSelectedCard] = useState(null);
@@ -46,20 +50,33 @@ function App() {
         setCollection(data);
     }
 
-    async function openPage(pageId) {
-        const pageData = await getBinderPage(pageId);
-        setPage(pageData);
+    // spread 0 = [blank inside cover, page 1]
+    // spread k (k >= 1) = [page 2k, page 2k+1]
+    async function loadSpread(pagesList, index) {
+        const leftNumber = index === 0 ? null : index * 2;
+        const rightNumber = index === 0 ? 1 : index * 2 + 1;
+
+        const leftMeta = pagesList.find(p => p.page_number === leftNumber);
+        const rightMeta = pagesList.find(p => p.page_number === rightNumber);
+
+        const [leftData, rightData] = await Promise.all([
+            leftMeta ? getBinderPage(leftMeta.page_id) : Promise.resolve(null),
+            rightMeta ? getBinderPage(rightMeta.page_id) : Promise.resolve(null)
+        ]);
+
+        setLeftPage(leftData);
+        setRightPage(rightData);
+        setSpreadIndex(index);
     }
 
     async function openBinder(binderId) {
         setActiveBinderId(binderId);
         const pageList = await listBinderPages(binderId);
         setPages(pageList);
-        if (pageList.length > 0) {
-            await openPage(pageList[0].page_id);
-        } else {
-            setPage(null);
-        }
+        setCoverOpen(false);
+        setSpreadIndex(0);
+        setLeftPage(null);
+        setRightPage(null);
     }
 
     async function refreshBinders(preferBinderId = null) {
@@ -92,7 +109,9 @@ function App() {
         setBinders([]);
         setActiveBinderId(null);
         setPages([]);
-        setPage(null);
+        setCoverOpen(false);
+        setLeftPage(null);
+        setRightPage(null);
         setCollection([]);
     }
 
@@ -123,37 +142,69 @@ function App() {
         if (binderId === activeBinderId) {
             setActiveBinderId(null);
             setPages([]);
-            setPage(null);
+            setCoverOpen(false);
+            setLeftPage(null);
+            setRightPage(null);
         }
 
         await refreshBinders();
     }
 
-    async function handleAddPage() {
-        if (!activeBinderId) return;
-        const result = await addBinderPage(activeBinderId);
-        const pageList = await listBinderPages(activeBinderId);
-        setPages(pageList);
-        await openPage(result.page_id);
+    function handleOpenCover() {
+        setCoverOpen(true);
+        loadSpread(pages, 0);
     }
 
-    async function handleSlotClick(position) {
-        if (!selectedCard || !page) return;
-        await placeCard(page.page_id, position, selectedCard.card_id);
-        await openPage(page.page_id);
+    function handleCloseCover() {
+        setCoverOpen(false);
+        setLeftPage(null);
+        setRightPage(null);
+        setSpreadIndex(0);
+    }
+
+    function handlePrevSpread() {
+        if (spreadIndex === 0) {
+            handleCloseCover();
+        } else {
+            loadSpread(pages, spreadIndex - 1);
+        }
+    }
+
+    function handleNextSpread() {
+        const maxSpread = Math.ceil((pages.length - 1) / 2);
+        if (spreadIndex < maxSpread) {
+            loadSpread(pages, spreadIndex + 1);
+        }
+    }
+
+    async function handleAddPage() {
+        if (!activeBinderId) return;
+        await addBinderPage(activeBinderId);
+        const pageList = await listBinderPages(activeBinderId);
+        setPages(pageList);
+        await loadSpread(pageList, spreadIndex);
+    }
+
+    async function handleSlotClick(side, position) {
+        const targetPage = side === "left" ? leftPage : rightPage;
+        if (!selectedCard || !targetPage) return;
+        await placeCard(targetPage.page_id, position, selectedCard.card_id);
+        await loadSpread(pages, spreadIndex);
         setSelectedCard(null);
     }
 
-    async function handleRemoveCard(position) {
-        if (!page) return;
-        await removeCard(page.page_id, position);
-        await openPage(page.page_id);
+    async function handleRemoveCard(side, position) {
+        const targetPage = side === "left" ? leftPage : rightPage;
+        if (!targetPage) return;
+        await removeCard(targetPage.page_id, position);
+        await loadSpread(pages, spreadIndex);
     }
 
-    async function handleSort() {
-        if (!page) return;
-        await sortBinderPage(page.page_id);
-        await openPage(page.page_id);
+    async function handleSortSide(side) {
+        const targetPage = side === "left" ? leftPage : rightPage;
+        if (!targetPage) return;
+        await sortBinderPage(targetPage.page_id);
+        await loadSpread(pages, spreadIndex);
     }
 
     async function handleCardAdded() {
@@ -168,16 +219,7 @@ function App() {
     async function handleUpdateCondition(itemId, condition) {
         await updateCondition(itemId, condition);
         await refreshCollection();
-        if (page) await openPage(page.page_id);
-    }
-
-    function goToAdjacentPage(direction) {
-        if (!page) return;
-        const idx = pages.findIndex(p => p.page_id === page.page_id);
-        const nextIdx = idx + direction;
-        if (nextIdx >= 0 && nextIdx < pages.length) {
-            openPage(pages[nextIdx].page_id);
-        }
+        if (coverOpen) await loadSpread(pages, spreadIndex);
     }
 
     if (!authed) {
@@ -185,7 +227,7 @@ function App() {
     }
 
     const activeBinder = binders.find(b => b.binder_id === activeBinderId);
-    const currentPageIndex = page ? pages.findIndex(p => p.page_id === page.page_id) : -1;
+    const maxSpread = Math.ceil((pages.length - 1) / 2);
 
     return (
         <>
@@ -273,39 +315,109 @@ function App() {
 
             <div className="main">
 
-                {page ? (
+                {activeBinder ? (
                     <>
-                        <h1>{activeBinder?.name}</h1>
+                        <h1>{activeBinder.name}</h1>
 
-                        <div className="toolbar">
-                            <button onClick={handleSort}>Sort A–Z</button>
-                            <button onClick={handleAddPage}>+ Add Page</button>
-                            <button onClick={() => setArtOnly(!artOnly)}>
-                                {artOnly ? "Show Info" : "Art Only"}
-                            </button>
-                        </div>
+                        {!coverOpen ? (
 
-                        <div className="page-nav">
-                            <button
-                                onClick={() => goToAdjacentPage(-1)}
-                                disabled={currentPageIndex <= 0}
-                            >
-                                ← Prev
-                            </button>
+                            <div className="binder-viewport closed">
 
-                            <span>
-                                Page {page.page_number} of {page.total_pages}
-                            </span>
+                                <div
+                                    className="binder-cover-face"
+                                    style={activeBinder.cover_image ? { backgroundImage: `url(${activeBinder.cover_image})` } : {}}
+                                >
+                                    {!activeBinder.cover_image && <span className="cover-placeholder">📁</span>}
+                                </div>
 
-                            <button
-                                onClick={() => goToAdjacentPage(1)}
-                                disabled={currentPageIndex === -1 || currentPageIndex >= pages.length - 1}
-                            >
-                                Next →
-                            </button>
-                        </div>
+                                <button className="open-cover-button" onClick={handleOpenCover}>
+                                    Open Binder →
+                                </button>
 
-                        <BinderGrid binder={page} onSlotClick={handleSlotClick} onRemoveCard={handleRemoveCard} artOnly={artOnly} />
+                            </div>
+
+                        ) : (
+
+                            <>
+                                <div className="toolbar">
+                                    <button onClick={handleAddPage}>+ Add Page</button>
+                                    <button onClick={() => setArtOnly(!artOnly)}>
+                                        {artOnly ? "Show Info" : "Art Only"}
+                                    </button>
+                                </div>
+
+                                <div className="binder-viewport open">
+
+                                    <button className="page-arrow left-arrow" onClick={handlePrevSpread}>
+                                        {spreadIndex === 0 ? "✕" : "←"}
+                                    </button>
+
+                                    <div className="binder-spread">
+
+                                        <div className="binder-half">
+                                            {leftPage ? (
+                                                <>
+                                                    <div className="half-label">Page {leftPage.page_number}</div>
+                                                    <BinderGrid
+                                                        binder={leftPage}
+                                                        onSlotClick={(pos) => handleSlotClick("left", pos)}
+                                                        onRemoveCard={(pos) => handleRemoveCard("left", pos)}
+                                                        artOnly={artOnly}
+                                                    />
+                                                    {!artOnly && (
+                                                        <button className="sort-button" onClick={() => handleSortSide("left")}>
+                                                            Sort A–Z
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="blank-panel" />
+                                            )}
+                                        </div>
+
+                                        <div className="binder-spine">
+                                            <div className="spine-ring" />
+                                            <div className="spine-ring" />
+                                            <div className="spine-ring" />
+                                        </div>
+
+                                        <div className="binder-half">
+                                            {rightPage ? (
+                                                <>
+                                                    <div className="half-label">Page {rightPage.page_number}</div>
+                                                    <BinderGrid
+                                                        binder={rightPage}
+                                                        onSlotClick={(pos) => handleSlotClick("right", pos)}
+                                                        onRemoveCard={(pos) => handleRemoveCard("right", pos)}
+                                                        artOnly={artOnly}
+                                                    />
+                                                    {!artOnly && (
+                                                        <button className="sort-button" onClick={() => handleSortSide("right")}>
+                                                            Sort A–Z
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="blank-panel add-page-panel" onClick={handleAddPage}>
+                                                    + Add Page
+                                                </div>
+                                            )}
+                                        </div>
+
+                                    </div>
+
+                                    <button
+                                        className="page-arrow right-arrow"
+                                        onClick={handleNextSpread}
+                                        disabled={spreadIndex >= maxSpread}
+                                    >
+                                        →
+                                    </button>
+
+                                </div>
+                            </>
+
+                        )}
                     </>
                 ) : (
                     <h2>Create your first binder to get started</h2>

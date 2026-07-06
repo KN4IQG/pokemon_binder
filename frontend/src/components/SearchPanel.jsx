@@ -10,6 +10,15 @@ const CONDITIONS = [
     "Damaged"
 ];
 
+const CONDITION_MULTIPLIERS = {
+    "Mint": 1.05,
+    "Near Mint": 1.0,
+    "Lightly Played": 0.85,
+    "Moderately Played": 0.70,
+    "Heavily Played": 0.50,
+    "Damaged": 0.30
+};
+
 function SearchPanel({ onCardAdded }) {
 
     const [query, setQuery] = useState("");
@@ -86,7 +95,9 @@ function SearchPanel({ onCardAdded }) {
                             <br />
                             {card.set}
                             <br />
-                            {card.price != null ? `$${card.price.toFixed(2)}` : "No price data"}
+                            {card.price != null
+                                ? `Est. at ${condition}: $${(card.price * CONDITION_MULTIPLIERS[condition]).toFixed(2)}`
+                                : "No price data"}
                             <br />
                             <button onClick={() => handleAdd(card.id)}>
                                 Add to Collection
