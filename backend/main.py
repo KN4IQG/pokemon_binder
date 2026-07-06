@@ -455,6 +455,29 @@ def place_card(
     return {"message": "placed"}
 
 
+@app.delete("/binder/slot")
+def remove_card(
+    page_id: int,
+    position: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    get_owned_page(db, page_id, current_user)
+
+    slot = (
+        db.query(BinderSlot)
+        .filter(BinderSlot.page_id == page_id, BinderSlot.position == position)
+        .first()
+    )
+
+    if slot:
+        db.delete(slot)
+        db.commit()
+
+    return {"message": "removed"}
+
+
 @app.post("/binder/page/{page_id}/sort")
 def sort_binder_page(
     page_id: int,

@@ -317,6 +317,11 @@ border-radius:6px;
     margin-bottom: 0;
 }
 
+.delete-button.small.slot-remove {
+    top: 2px;
+    right: 2px;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;

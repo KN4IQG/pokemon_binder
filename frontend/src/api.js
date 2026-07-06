@@ -162,6 +162,15 @@ export async function placeCard(pageId, position, cardId) {
     return await response.json();
 }
 
+export async function removeCard(pageId, position) {
+    const response = await authFetch(
+        `${API_URL}/binder/slot?page_id=${pageId}&position=${position}`,
+        { method: "DELETE" }
+    );
+    if (!response.ok) throw new Error("Failed to remove card");
+    return await response.json();
+}
+
 export async function sortBinderPage(pageId) {
     const response = await authFetch(`${API_URL}/binder/page/${pageId}/sort`, {
         method: "POST"

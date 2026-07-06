@@ -1,4 +1,4 @@
-function BinderGrid({ binder, onSlotClick }) {
+function BinderGrid({ binder, onSlotClick, onRemoveCard }) {
 
     return (
 
@@ -31,6 +31,16 @@ function BinderGrid({ binder, onSlotClick }) {
                                     ${cell.card.price.toFixed(2)}
                                 </div>
                             )}
+
+                            <button
+                                className="delete-button small slot-remove"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemoveCard(cell.position);
+                                }}
+                            >
+                                ×
+                            </button>
 
                         </div>
 

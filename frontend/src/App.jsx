@@ -18,6 +18,7 @@ import {
     addBinderPage,
     getBinderPage,
     placeCard,
+    removeCard,
     sortBinderPage
 } from "./api";
 
@@ -139,6 +140,12 @@ function App() {
         await placeCard(page.page_id, position, selectedCard.card_id);
         await openPage(page.page_id);
         setSelectedCard(null);
+    }
+
+    async function handleRemoveCard(position) {
+        if (!page) return;
+        await removeCard(page.page_id, position);
+        await openPage(page.page_id);
     }
 
     async function handleSort() {
@@ -287,7 +294,7 @@ function App() {
                             </button>
                         </div>
 
-                        <BinderGrid binder={page} onSlotClick={handleSlotClick} />
+                        <BinderGrid binder={page} onSlotClick={handleSlotClick} onRemoveCard={handleRemoveCard} />
                     </>
                 ) : (
                     <h2>Create your first binder to get started</h2>
