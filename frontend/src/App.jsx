@@ -12,6 +12,8 @@ import {
     getCollection,
     listBinders,
     createBinder,
+    updateBinderCover,
+    deleteBinder,
     listBinderPages,
     addBinderPage,
     getBinderPage,
@@ -33,6 +35,7 @@ function App() {
 
     const [newName, setNewName] = useState("");
     const [newSize, setNewSize] = useState(3);
+    const [newCoverUrl, setNewCoverUrl] = useState("");
 
     async function refreshCollection() {
         const data = await getCollection();
@@ -91,9 +94,35 @@ function App() {
 
     async function handleCreateBinder() {
         if (!newName.trim()) return;
-        const result = await createBinder(newName, newSize);
+        const result = await createBinder(newName, newSize, newCoverUrl.trim() || null);
         setNewName("");
+        setNewCoverUrl("");
         await refreshBinders(result.binder_id);
+    }
+
+    async function handleChangeCover(binderId) {
+        const url = window.prompt("Paste an image URL for this binder's cover:");
+        if (!url) return;
+        await updateBinderCover(binderId, url.trim());
+        await refreshBinders(binderId);
+    }
+
+    async function handleDeleteBinder(binderId, e) {
+        e.stopPropagation();
+
+        if (!window.confirm("Delete this binder and everything in it? This can't be undone.")) {
+            return;
+        }
+
+        await deleteBinder(binderId);
+
+        if (binderId === activeBinderId) {
+            setActiveBinderId(null);
+            setPages([]);
+            setPage(null);
+        }
+
+        await refreshBinders();
     }
 
     async function handleAddPage() {
@@ -161,12 +190,36 @@ function App() {
                     <div
                         key={b.binder_id}
                         className={
-                            "collection-card" +
+                            "binder-row" +
                             (activeBinderId === b.binder_id ? " selected" : "")
                         }
                         onClick={() => openBinder(b.binder_id)}
                     >
-                        {b.name} ({b.size}x{b.size}) — {b.page_count} page{b.page_count !== 1 ? "s" : ""}
+                        <div className="binder-cover">
+                            {b.cover_image ? (
+                                <img src={b.cover_image} alt={b.name} />
+                            ) : (
+                                <span>📁</span>
+                            )}
+                        </div>
+
+                        <div className="binder-info">
+                            <b>{b.name}</b>
+                            <br />
+                            {b.size}x{b.size} — {b.page_count} page{b.page_count !== 1 ? "s" : ""}
+                        </div>
+
+                        <div className="binder-actions">
+                            <button onClick={(e) => { e.stopPropagation(); handleChangeCover(b.binder_id); }}>
+                                Cover
+                            </button>
+                            <button
+                                className="delete-button"
+                                onClick={(e) => handleDeleteBinder(b.binder_id, e)}
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 ))}
 
@@ -174,6 +227,12 @@ function App() {
                     placeholder="New binder name"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
+                />
+
+                <input
+                    placeholder="Cover image URL (optional)"
+                    value={newCoverUrl}
+                    onChange={e => setNewCoverUrl(e.target.value)}
                 />
 
                 <select value={newSize} onChange={e => setNewSize(Number(e.target.value))}>

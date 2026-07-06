@@ -71,6 +71,10 @@ class AuthRequest(BaseModel):
     password: str
 
 
+class CoverUpdate(BaseModel):
+    cover_image: str
+
+
 def fetch_card(card_id: str):
     res = requests.get(f"{TCGDEX_BASE_URL}/cards/{card_id}")
 
@@ -239,6 +243,7 @@ def get_collection(
 def create_binder(
     name: str,
     size: int = 3,
+    cover_image: str = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -246,7 +251,7 @@ def create_binder(
     if size not in VALID_SIZES:
         return {"error": "size must be 2, 3, or 4"}
 
-    binder = Binder(user_id=current_user.id, name=name, size=size)
+    binder = Binder(user_id=current_user.id, name=name, size=size, cover_image=cover_image)
     db.add(binder)
     db.commit()
     db.refresh(binder)
@@ -293,6 +298,7 @@ def list_binders(
             "binder_id": b.id,
             "name": b.name,
             "size": b.size,
+            "cover_image": b.cover_image,
             "page_count": page_count,
             "first_page_id": first_page.id if first_page else None
         })
@@ -330,6 +336,46 @@ def add_page(
     db.refresh(page)
 
     return {"page_id": page.id, "page_number": page.page_number}
+
+
+@app.patch("/binder/{binder_id}/cover")
+def update_binder_cover(
+    binder_id: int,
+    payload: CoverUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    binder = get_owned_binder(db, binder_id, current_user)
+    binder.cover_image = payload.cover_image
+    db.commit()
+
+    return {"message": "cover updated"}
+
+
+@app.delete("/binder/{binder_id}")
+def delete_binder(
+    binder_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    binder = get_owned_binder(db, binder_id, current_user)
+
+    page_ids = [
+        p.id for p in
+        db.query(BinderPage).filter(BinderPage.binder_id == binder_id).all()
+    ]
+
+    if page_ids:
+        db.query(BinderSlot).filter(BinderSlot.page_id.in_(page_ids)).delete(synchronize_session=False)
+
+    db.query(BinderPage).filter(BinderPage.binder_id == binder_id).delete(synchronize_session=False)
+
+    db.delete(binder)
+    db.commit()
+
+    return {"message": "deleted"}
 
 
 @app.get("/binder/{binder_id}/pages")

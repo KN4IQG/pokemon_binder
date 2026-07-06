@@ -97,12 +97,32 @@ export async function listBinders() {
     return await response.json();
 }
 
-export async function createBinder(name, size) {
-    const response = await authFetch(
-        `${API_URL}/binder/create?name=${encodeURIComponent(name)}&size=${size}`,
-        { method: "POST" }
-    );
+export async function createBinder(name, size, coverImage = null) {
+    const params = new URLSearchParams({ name, size });
+    if (coverImage) params.set("cover_image", coverImage);
+
+    const response = await authFetch(`${API_URL}/binder/create?${params.toString()}`, {
+        method: "POST"
+    });
     if (!response.ok) throw new Error("Failed to create binder");
+    return await response.json();
+}
+
+export async function updateBinderCover(binderId, coverImage) {
+    const response = await authFetch(`${API_URL}/binder/${binderId}/cover`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cover_image: coverImage })
+    });
+    if (!response.ok) throw new Error("Failed to update cover");
+    return await response.json();
+}
+
+export async function deleteBinder(binderId) {
+    const response = await authFetch(`${API_URL}/binder/${binderId}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete binder");
     return await response.json();
 }
 

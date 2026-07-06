@@ -28,6 +28,7 @@ class Binder(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String)
     size = Column(Integer, default=3)  # rows == cols for every page in this binder
+    cover_image = Column(String, nullable=True)
 
 
 class BinderPage(Base):
